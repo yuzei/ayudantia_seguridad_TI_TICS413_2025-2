@@ -1,0 +1,173 @@
+\UseRawInputEncoding
+\documentclass[a4paper,12pt]{article}
+\usepackage{listings}
+\usepackage{graphicx}
+\usepackage[colorlinks=true, linkcolor=blue, urlcolor=red, citecolor=green]{hyperref}
+\usepackage{geometry}
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage[spanish]{babel}
+\usepackage{xcolor}
+\usepackage{booktabs}
+\usepackage{float}
+\usepackage{verbatim}
+
+\definecolor{graybackground}{rgb}{0.9, 0.9, 0.9} % Define un gris claro (casi blanco)
+
+\lstset{
+  basicstyle=\ttfamily\footnotesize,
+  backgroundcolor=\color{gray!10},
+  frame=single,
+  breaklines=true,
+  columns=fullflexible
+}
+
+% Ajuste de márgenes (opcional)
+\geometry{top=2cm, bottom=2cm, left=2.5cm, right=2.5cm}
+
+% Personalización del título
+\makeatletter
+\renewcommand{\maketitle}{
+    \begin{center}
+        \includegraphics[width=0.8\textwidth]{img/header.png} \\[1cm] % Ajusta el tamaño y el espacio debajo del logo
+        {\LARGE \textbf{\@title}} \\[0.5cm] % Título en grande y negrita
+        {\large \@author} \\[0.5cm] % Autor en tamaño grande
+        {\@date}
+    \end{center}
+}
+\makeatother
+
+\title{Seguridad en TI (TICS413)
+\\ Lab n°4
+}
+\author{Matías García
+\\ {matiasgarcia@alumnos.uai.cl}}
+\date{13 de abril 2026}
+
+\begin{document}
+
+\maketitle
+
+\section{Introducción}
+
+El presente laboratorio tiene como objetivo analizar tráfico de red utilizando la herramienta \textbf{Snort}, con el fin de determinar si las reglas de la comunidad permiten reconstruir la historia de un incidente de seguridad.
+
+El caso de estudio corresponde a un análisis de tráfico en el cual un atacante obtiene acceso remoto a un sistema y ejecuta múltiples comandos, incluyendo la creación de un usuario malicioso.
+
+\section{Objetivos}
+
+\begin{itemize}
+    \item Configurar Snort en un entorno de laboratorio.
+    \item Analizar un archivo PCAP.
+    \item Detectar actividad maliciosa mediante reglas.
+    \item Evaluar la capacidad de Snort para reconstruir un incidente.
+\end{itemize}
+
+\section{Configuración de Snort}
+
+\subsection{Reglas de comunidad}
+
+\begin{lstlisting}
+cd /etc/snort/rules
+sudo wget https://www.snort.org/downloads/community/community-rules.tar.gz
+sudo tar -xvzf community-rules.tar.gz
+\end{lstlisting}
+
+\subsection{Configuración}
+
+Editar el archivo:
+
+\begin{lstlisting}
+sudo nano /etc/snort/snort.conf
+\end{lstlisting}
+
+Agregar:
+
+\begin{lstlisting}
+include $RULE_PATH/community.rules
+include $RULE_PATH/local.rules
+\end{lstlisting}
+
+\section{Ejecución del análisis}
+
+\subsection{Análisis básico}
+
+\begin{lstlisting}
+snort -r rogue_user.pcap -c /etc/snort/snort.conf -A console
+\end{lstlisting}
+
+\subsection{Modo detallado}
+
+\begin{lstlisting}
+snort -r rogue_user.pcap -c /etc/snort/snort.conf -A full
+\end{lstlisting}
+
+\subsection{Guardar logs}
+
+\begin{lstlisting}
+snort -r rogue_user.pcap -c /etc/snort/snort.conf -l ./logs
+cat logs/alert
+\end{lstlisting}
+
+\section{Reglas personalizadas}
+
+Las siguientes reglas permiten detectar eventos específicos del ataque.
+
+\subsection{Shell remota}
+
+\begin{lstlisting}
+alert tcp any any -> any any (msg:"Possible remote shell"; content:"/bin/sh"; sid:1000002;)
+\end{lstlisting}
+
+\subsection{Acceso a archivos sensibles}
+
+\begin{lstlisting}
+alert tcp any any -> any any (msg:"Access to passwd file"; content:"/etc/passwd"; sid:1000003;)
+
+alert tcp any any -> any any (msg:"Access to shadow file"; content:"/etc/shadow"; sid:1000004;)
+\end{lstlisting}
+
+\subsection{Creación de usuario}
+
+\begin{lstlisting}
+alert tcp any any -> any any (msg:"User creation detected"; content:"adduser"; sid:1000005;)
+\end{lstlisting}
+
+\subsection{Comandos ejecutados}
+
+\begin{lstlisting}
+alert tcp any any -> any any (msg:"Command execution - whoami"; content:"whoami"; sid:1000006;)
+
+alert tcp any any -> any any (msg:"Command execution - ls"; content:"ls"; sid:1000007;)
+
+alert tcp any any -> any any (msg:"Command execution - finger"; content:"finger"; sid:1000008;)
+\end{lstlisting}
+
+\subsection{Exfiltración de datos}
+
+\begin{lstlisting}
+alert tcp any any -> any any (msg:"Suspicious data exfiltration"; dsize:>500; sid:1000009;)
+\end{lstlisting}
+
+\section{Ejecución con reglas personalizadas}
+
+\begin{lstlisting}
+snort -r rogue_user.pcap -c /etc/snort/snort.conf -A console -q
+\end{lstlisting}
+
+\section{Resultados esperados}
+
+Mediante el uso de Snort y las reglas personalizadas, se pueden detectar:
+
+\begin{itemize}
+    \item Ejecución de shell remota
+    \item Comandos del atacante (whoami, ls, finger)
+    \item Acceso a archivos sensibles
+    \item Creación de usuario malicioso
+\end{itemize}
+
+\section{Tarea}
+
+Debe realizar un informe detallando lo realizado, que ha compredido del trabajo y las medidas que puedes usar para evitarlo (usando el contenido aprendido en clases)
+
+\end{document}
